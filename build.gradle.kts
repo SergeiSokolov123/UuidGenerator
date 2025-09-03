@@ -18,7 +18,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf:${springBootVersion}")
 }
-
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "org.example.Main"
+    }
+}
 tasks.test {
     useJUnitPlatform()
 }
