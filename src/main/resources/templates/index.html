@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор UUID</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .uuid-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .copy-btn {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            transform: scale(1.1);
+            color: #20c997 !important;
+        }
+        .main-container {
+            min-height: 100vh;
+            background: #f8f9fa;
+            padding: 2rem 0;
+        }
+        .list-group-item {
+            font-family: 'Courier New', monospace;
+            padding: 1rem;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .form-container {
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+        }
+        .input-container {
+            flex: 1;
+        }
+        .btn-generate {
+            height: 38px;
+            white-space: nowrap;
+        }
+        .form-text-custom {
+            color: #6c757d !important;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+        .uuid-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 768px) {
+            .form-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-generate {
+                width: 100%;
+                height: 45px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container main-container">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <!-- Toast уведомление -->
+            <div class="toast align-items-center text-white bg-success border-0" role="alert" id="copyToast">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        UUID скопирован в буфер обмена!
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+
+            <div class="text-center mb-4">
+                <h1 class="display-4 text-primary">
+                    <i class="bi bi-robot"></i> UUID Generator
+                </h1>
+                <p class="lead text-muted">Генератор уникальных идентификаторов</p>
+            </div>
+
+            <!-- Простая и понятная форма -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form th:action="@{/generate}" method="post">
+                        <div class="mb-3">
+                            <label for="uuidCount" class="form-label fw-bold">Количество UUID:</label>
+                            <input type="number" id="uuidCount" name="count" class="form-control"
+                                   min="1" max="50" th:value="${count}" required
+                                   oninput="this.value = Math.max(1, Math.min(50, parseInt(this.value) || 1))">
+                            <div class="form-text-custom">От 1 до 50 UUID</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-lightning-charge-fill me-2"></i>Сгенерировать UUID
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Результат для одного UUID -->
+            <div th:if="${uuid != null}">
+                <div class="uuid-box text-center">
+                    <h5 class="mb-3"><i class="bi bi-file-earmark-text"></i> Ваш UUID:</h5>
+                    <div class="d-flex justify-content-center align-items-center">
+                        <code class="fs-5 me-3" th:text="${uuid}" id="uuidText"></code>
+                        <i class="bi bi-clipboard copy-btn fs-4"
+                           th:attr="data-uuid=${uuid}"
+                           onclick="copyToClipboard(this, this.getAttribute('data-uuid'))"
+                           data-bs-toggle="tooltip" title="Скопировать"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Результат для нескольких UUID -->
+            <div th:if="${uuids != null and not uuids.empty}">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-list-check me-2"></i>Сгенерировано UUID:
+                            <span th:text="${uuids.size()}"></span>
+                        </div>
+                        <i class="bi bi-clipboard copy-btn fs-5"
+                           onclick="copyAllUuids()"
+                           data-bs-toggle="tooltip" title="Скопировать все"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <div th:each="uuid, iter : ${uuids}"
+                                 class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-3" th:text="${iter.index + 1}"></span>
+                                    <code th:text="${uuid}" class="uuid-text"></code>
+                                </div>
+                                <i class="bi bi-clipboard copy-btn text-primary fs-5"
+                                   th:attr="data-uuid=${uuid}"
+                                   onclick="copyToClipboard(this, this.getAttribute('data-uuid'))"
+                                   data-bs-toggle="tooltip" title="Скопировать"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Инструкция -->
+            <div th:if="${uuid != null or (uuids != null and not uuids.empty)}" class="mt-4">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Как использовать:</h6>
+                    <ul class="mb-0">
+                        <li>Нажмите на иконку <i class="bi bi-clipboard text-primary"></i> чтобы скопировать UUID</li>
+                        <li>Используйте для баз данных, уникальных идентификаторов, тестирования</li>
+                        <li>UUID версии 4 (случайные)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Инициализация tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+
+    function copyToClipboard(buttonElement, text) {
+        if (!text) {
+            console.error('Текст для копирования не найден');
+            return;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+            toast.show();
+
+            const originalIcon = buttonElement.classList.contains('bi-clipboard') ? 'bi-clipboard' : 'bi-clipboard-check';
+            buttonElement.classList.remove(originalIcon);
+            buttonElement.classList.add('bi-check-circle-fill', 'text-success');
+
+            setTimeout(() => {
+                buttonElement.classList.remove('bi-check-circle-fill', 'text-success');
+                buttonElement.classList.add(originalIcon);
+            }, 2000);
+
+        }).catch(err => {
+            console.error('Ошибка копирования: ', err);
+            alert('Не удалось скопировать текст: ' + err);
+        });
+    }
+
+    function copyAllUuids() {
+        const uuidElements = document.querySelectorAll('.uuid-text');
+        const allUuids = Array.from(uuidElements).map(el => el.textContent).join('\n');
+
+        if (allUuids) {
+            navigator.clipboard.writeText(allUuids).then(() => {
+                const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+                const toastBody = toast._element.querySelector('.toast-body');
+                toastBody.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Все UUID скопированы!';
+                toast.show();
+            }).catch(err => {
+                console.error('Ошибка копирования: ', err);
+            });
+        }
+    }
+</script>
+</body>
+</html>
